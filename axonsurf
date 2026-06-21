@@ -1,0 +1,228 @@
+#!/bin/bash
+# AxonSurf CLI - clean command interface
+# Usage: axonsurf goto https://example.com
+#        axonsurf click "#submit"
+#        axonsurf screenshot page.png
+
+SOCK="${AXON_SOCK:-/tmp/gtk.sock}"
+PROXY="${AXON_PROXY:-}"
+UA="${AXON_UA:-}"
+
+# Build flags
+FLAGS=""
+[ -n "$PROXY" ] && FLAGS="$FLAGS --proxy $PROXY"
+[ -n "$UA" ] && FLAGS="$FLAGS --ua $UA"
+
+# Check if server is running
+is_running() {
+    echo "url" | socat - UNIX-CONNECT:$SOCK 2>/dev/null | grep -q "http"
+}
+
+# Start browser if not running
+ensure_running() {
+    if ! is_running; then
+        axonsurf --headless $FLAGS --socket "$SOCK" &
+        sleep 2
+        echo "started" >&2
+    fi
+}
+
+# Send command
+send() {
+    ensure_running
+    echo "$*" | socat - UNIX-CONNECT:$SOCK
+}
+
+# Main
+case "$1" in
+    start)
+        ensure_running
+        echo "browser started on $SOCK"
+        ;;
+    stop)
+        pkill -f "axonsurf.*$SOCK" 2>/dev/null
+        echo "browser stopped"
+        ;;
+    status)
+        if is_running; then
+            echo "running"
+        else
+            echo "stopped"
+        fi
+        ;;
+    goto|open)
+        send "goto $2"
+        ;;
+    back|forward|reload)
+        send "$1"
+        ;;
+    click)
+        send "click $2 $3 $4"
+        ;;
+    type)
+        send "type $2"
+        ;;
+    typeinto)
+        send "typeinto $2 $3"
+        ;;
+    key)
+        send "key $2"
+        ;;
+    scroll)
+        send "scroll ${2:-0} ${3:-400}"
+        ;;
+    screenshot)
+        send "screenshot ${2:-screenshot.png}"
+        ;;
+    screenshot-viewport)
+        send "screenshot viewport ${2:-screenshot.png}"
+        ;;
+    eval)
+        send "eval $2"
+        ;;
+    text)
+        send "text"
+        ;;
+    html)
+        send "content"
+        ;;
+    tabs)
+        send "tabs"
+        ;;
+    newtab)
+        send "newtab $2"
+        ;;
+    tab)
+        send "tab $2"
+        ;;
+    url)
+        send "url"
+        ;;
+    title)
+        send "title"
+        ;;
+    viewport)
+        send "viewport $2 $3"
+        ;;
+    resize)
+        send "resize $2 $3"
+        ;;
+    extension-load)
+        send "extension-load $2"
+        ;;
+    extension-inject)
+        send "extension-inject"
+        ;;
+    extension-list)
+        send "extension-list"
+        ;;
+    record-video)
+        send "record-video $2 $3 $4"
+        ;;
+    net-log)
+        send "net-log"
+        ;;
+    net-stop)
+        send "net-stop"
+        ;;
+    net-requests)
+        send "net-requests"
+        ;;
+    perf-timing)
+        send "perf-timing"
+        ;;
+    a11y)
+        send "inspect"
+        ;;
+    a11y-audit)
+        send "a11y-audit"
+        ;;
+    dismiss)
+        send "dismiss"
+        ;;
+    ls-get|ls-set|ls-all|ss-get|ss-set)
+        send "$@"
+        ;;
+    clipboard)
+        send "clipboard $2"
+        ;;
+    find)
+        send "find $2"
+        ;;
+    elements)
+        send "elements"
+        ;;
+    *)
+        echo "AxonSurf CLI"
+        echo ""
+        echo "Usage: axonsurf <command> [args]"
+        echo ""
+        echo "Navigation:"
+        echo "  axonsurf goto <url>          Go to URL"
+        echo "  axonsurf back                Go back"
+        echo "  axonsurf forward             Go forward"
+        echo "  axonsurf reload              Reload page"
+        echo "  axonsurf url                 Get current URL"
+        echo "  axonsurf title               Get page title"
+        echo ""
+        echo "Input:"
+        echo "  axonsurf click <x> <y>       Click at coordinates"
+        echo "  axonsurf click <selector>    Click element"
+        echo "  axonsurf type <text>         Type text"
+        echo "  axonsurf typeinto <sel> <t>  Click and type"
+        echo "  axonsurf key <key>           Press key"
+        echo ""
+        echo "Elements:"
+        echo "  axonsurf find <selector>     Find element"
+        echo "  axonsurf elements            List all elements"
+        echo "  axonsurf text                Get page text"
+        echo "  axonsurf html                Get page HTML"
+        echo "  axonsurf dismiss             Dismiss overlays"
+        echo ""
+        echo "Screenshots:"
+        echo "  axonsurf screenshot <file>   Take screenshot"
+        echo "  axonsurf screenshot-viewport <file>"
+        echo ""
+        echo "Tabs:"
+        echo "  axonsurf tabs                List tabs"
+        echo "  axonsurf newtab [url]        Open new tab"
+        echo "  axonsurf tab <index>         Switch tab"
+        echo ""
+        echo "Extensions:"
+        echo "  axonsurf extension-load <dir>    Load extensions"
+        echo "  axonsurf extension-inject        Inject extensions"
+        echo "  axonsurf extension-list          List extensions"
+        echo ""
+        echo "Recording:"
+        echo "  axonsurf record-video start <file> [fps]"
+        echo "  axonsurf record-video stop"
+        echo "  axonsurf record-video status"
+        echo ""
+        echo "Monitoring:"
+        echo "  axonsurf net-log              Start network logging"
+        echo "  axonsurf net-requests         Get logged requests"
+        echo "  axonsurf perf-timing          Get page load timing"
+        echo "  axonsurf a11y-audit           Accessibility audit"
+        echo ""
+        echo "Storage:"
+        echo "  axonsurf ls-get <key>        Get localStorage"
+        echo "  axonsurf ls-set <key> <val>  Set localStorage"
+        echo "  axonsurf ls-all              Get all localStorage"
+        echo "  axonsurf clipboard read      Read clipboard"
+        echo "  axonsurf clipboard write <t> Write to clipboard"
+        echo ""
+        echo "Environment:"
+        echo "  AXON_SOCK=/tmp/gtk.sock"
+        echo "  AXON_PROXY=http://user:pass@host:port"
+        echo "  AXON_UA=\"custom user agent\""
+        echo ""
+        echo "Examples:"
+        echo "  axonsurf start"
+        echo "  axonsurf goto https://google.com"
+        echo "  axonsurf type \"hello world\""
+        echo "  axonsurf screenshot page.png"
+        echo "  axonsurf extension-load ~/.config/axonsurf/extensions"
+        echo "  axonsurf extension-inject"
+        echo "  axonsurf eval \"document.title\""
+        ;;
+esac
