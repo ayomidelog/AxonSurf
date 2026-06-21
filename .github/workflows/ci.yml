@@ -27,8 +27,7 @@ jobs:
             libcurl4-openssl-dev \
             xvfb \
             openbox \
-            socat \
-            xdotool
+            socat
 
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
