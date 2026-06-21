@@ -1,67 +1,65 @@
 # Limitations
 
-AxonSurf is a powerful browser automation tool, but it has some limitations to be aware of.
+AxonSurf is a focused browser automation tool, and some tradeoffs are intentional. The constraints below describe the current implementation rather than long-term product direction.
 
-## Display Requirements
+## Display and Runtime
 
-- **Requires X11 display** — either a real display or virtual framebuffer (Xvfb)
-- **Headless mode** auto-starts Xvfb, but requires it to be installed
-- **No Wayland support** — uses X11-native input via xdotool
+- **Requires an X11-compatible display path** — either a real X11 display or a virtual framebuffer such as Xvfb
+- **Headless mode depends on Xvfb** — AxonSurf can start it automatically, but it still needs to be installed on the system
+- **Wayland is not a first-class target** — current automation assumptions are built around X11-style display handling
 
 ## Browser Engine
 
-- **WebKitGTK only** — not Chromium/Firefox engine, so some sites may render differently
-- **WebKitGTK 4.0** — older WebKit version, some modern CSS/JS features may not work
-- **No multi-process** — single process model, one crash kills everything
+- **WebKitGTK only** — this is not a Chromium- or Firefox-based automation stack, so rendering and compatibility will differ on some sites
+- **Engine behavior follows the platform WebKitGTK package** — site behavior can vary with distribution package versions
+- **Single application instance per process** — a crash still terminates the active browser instance
 
 ## Input Simulation
 
-- **xdotool dependency** — requires xdotool for native input events
-- **Coordinate-based clicks** — elements must be visible on screen
-- **No shadow DOM** — cannot penetrate shadow DOM boundaries
-- **No iframe automation** — limited iframe cross-origin support
+- **Visibility still matters** — coordinate-based interaction assumes the target is rendered and reachable
+- **Cross-origin iframe support is limited**
+- **Complex SPA event models can still be inconsistent** even with the current input and DOM event bridging
 
 ## Networking
 
-- **No HTTP/2 push** — WebKitGTK doesn't fully support HTTP/2 server push
-- **Proxy limitations** — SOCKS5 proxy support is limited
-- **No request interception** — cannot modify requests in-flight
+- **No request interception layer yet** — requests cannot currently be rewritten or blocked in-flight
+- **Proxy support is basic** — authentication and protocol coverage are not on par with dedicated interception proxies
 
 ## Extensions
 
-- **GES standard only** — custom extension format, not Chrome/Firefox extensions
-- **No popup UI** — extensions are JS-only, no browser action popups
-- **Single context** — all extensions share the same JS context
-- **No background scripts** — extensions run in page context only
+- **GES-only extension model** — this is a project-specific format, not a Chrome or Firefox extension runtime
+- **No popup or browser-action UI**
+- **No background process model** — extensions execute in page context
+- **Shared runtime assumptions** — extension isolation is limited
 
 ## Platform Support
 
-- **Linux only** — no macOS or Windows builds
-- **x86_64 and ARM64** — primary architectures
-- **Debian/Ubuntu focus** — package manager integration is apt-based
+- **Linux only**
+- **x86_64 and ARM64 are the primary targets**
+- **Debian/Ubuntu are the best-supported environments today**
 
 ## Performance
 
-- **Single-threaded** — all commands execute sequentially
-- **No connection pooling** — each page load is independent
-- **Memory usage** — WebKitGTK can be memory-hungry on large pages
+- **Command handling is sequential**
+- **Memory use can grow quickly on large or long-lived pages**
+- **Startup and rendering costs are tied to WebKitGTK and the local display stack**
 
 ## Security
 
-- **No sandboxing** — extensions have full page access
-- **No CSP enforcement** — extensions can bypass Content Security Policy
-- **Local socket** — command socket is local only, no auth
+- **No extension sandboxing**
+- **The command socket is local only and does not add an authentication layer**
+- **Injected extension code has broad page access**
 
-## What AxonSurf Is NOT
+## Non-Goals
 
 - Not a general-purpose browser for daily use
 - Not a replacement for Chrome/Firefox
-- Not a testing framework (though it can be used for testing)
+- Not a full browser testing framework by itself, even though it can be used in testing pipelines
 - Not designed for video streaming or complex web apps
 
 ## Known Issues
 
-- Some SPA frameworks may not detect URL changes correctly
-- Cookie management is limited to document.cookie (no HttpOnly cookies)
-- Video recording frame rate may vary under heavy load
-- Accessibility tree may be incomplete on complex pages
+- Some SPA navigation patterns may still require explicit waits
+- Cookie handling does not provide access to `HttpOnly` cookies through page JavaScript
+- Video recording frame rate can vary under load
+- Accessibility output is best-effort and may be incomplete on complex pages

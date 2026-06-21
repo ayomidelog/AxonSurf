@@ -190,15 +190,24 @@ Example metadata header:
 
 ## Testing
 
-The repository includes an end-to-end shell test suite that builds the binary, starts a headless instance, and exercises the socket interface.
+The repository includes two test layers:
 
-Run it with:
+- Native C tests wired into CMake and CTest
+- An end-to-end shell suite that drives the socket interface against a live headless instance
+
+Run the native tests with:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+Run the end-to-end suite with:
 
 ```bash
 bash tests/run_tests.sh
 ```
 
-The suite currently uses:
+The end-to-end suite currently uses:
 
 - `Xvfb`
 - `openbox`
@@ -217,7 +226,7 @@ src/storage/      profiles, cookies, proxy support
 src/extensions/   extension loading and injection
 src/headless/     Xvfb management
 src/monitor/      performance, network, and audit helpers
-tests/            shell-based end-to-end test suite
+tests/            native C tests and shell-based end-to-end checks
 ```
 
 ## Notes

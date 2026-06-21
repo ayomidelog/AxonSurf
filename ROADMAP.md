@@ -1,23 +1,19 @@
 # Roadmap
 
-Short and long-term plans for AxonSurf.
-
----
+This roadmap reflects likely next areas of work. It is intended as a planning guide, not a release guarantee.
 
 ## v1.1 — Polish & Stability
 
 - [ ] Fix extension injection race condition (currently requires explicit `extension-inject`)
 - [ ] Add `--proxy` support to extension-level proxy switching
 - [ ] Improve error messages (JSON error codes instead of raw strings)
-- [ ] Add `page.waitfor` with timeout parameter
 - [ ] Fix `record-video` frame rate consistency
 - [ ] Add `screenshot` quality/compression options
-- [ ] Support `screenshot element <selector>`
 - [ ] Add `upload` drag-and-drop support
 
 ## v1.2 — Tabs & Multi-Page
 
-- [ ] Real tab management (open/close/switch tabs via `newtab`)
+- [ ] Strengthen tab lifecycle handling and isolation
 - [ ] Multi-page support (each tab has its own context)
 - [ ] Tab persistence across session restarts
 - [ ] `tabs` returns full page info (title, URL, favicon)
@@ -28,7 +24,7 @@ Short and long-term plans for AxonSurf.
 - [ ] `scrollto <selector>` — smooth scroll to element
 - [ ] `drag <selector-from> <selector-to>` — drag between elements
 - [ ] `select <selector> <value>` — select dropdown option
-- [ ] `upload <selector> <file>` — file upload via native dialog
+- [ ] Improve file upload handling for real browser workflows
 - [ ] `key <combo>` — modifier keys (Ctrl+C, Alt+Tab, etc.)
 - [ ] `typeinto` with `--delay` for human-like typing
 
@@ -46,7 +42,7 @@ Short and long-term plans for AxonSurf.
 - [ ] GES manifest v2 (permissions, background scripts, storage API)
 - [ ] Extension popup UI (mini HTML overlay)
 - [ ] Extension storage API (per-extension persistent storage)
-- [ ] `extension-enable` / `extension-disable` without reload
+- [ ] `extension-enable` / `extension-disable` without full reload
 - [ ] Chrome Web Store compatibility layer (basic)
 
 ## v2.0 — Multi-Platform
@@ -70,8 +66,6 @@ Short and long-term plans for AxonSurf.
 - [ ] Cloud deployment (AWS/GCP/Azure)
 - [ ] Session sharing between instances
 - [ ] Load balancing across browser instances
-
----
 
 ## Non-Goals
 

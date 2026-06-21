@@ -4,7 +4,28 @@ All notable changes to AxonSurf will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
----
+## [Unreleased]
+
+### Changed
+
+- Updated the build and packaging flow to use WebKitGTK 4.1 on current Ubuntu releases
+- Improved headless startup so AxonSurf verifies display usability before relying on `DISPLAY`
+- Defaulted headless launches without `--socket` to `/tmp/axonsurf.sock`
+- Reworked the test setup to include both native C tests and the end-to-end shell suite
+- Updated CI to run `ctest` and the current shell-based integration checks
+
+### Fixed
+
+- Fixed `history-goto` index handling
+- Fixed `elements` command execution
+- Fixed `wait ... --state ...` command handling
+- Fixed extension injection to use the loaded extension set rather than a hard-coded path
+- Hardened command and page helper paths that previously embedded unescaped values into JavaScript
+- Stabilized the test harness server launch and socket client behavior
+
+### Added
+
+- Added compiled native tests under `tests/`, wired into CMake/CTest
 
 ## [1.0.0] — 2025-06-18
 
@@ -84,18 +105,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 **Build**
 - CMake build system
-- WebKitGTK 4.0, GTK3, json-glib, libcurl dependencies
-
----
-
-## [Unreleased]
-
-### Planned
-- Real tab management (multi-page contexts)
-- Extension system v2 (permissions, background scripts)
-- Request interception
-- AI-powered automation (`ai-act`, `ai-find`, `ai-extract`)
-- Docker image
-- macOS/Windows support
-- HAR export
-- Console log capture
+- WebKitGTK, GTK3, json-glib, libcurl dependencies
