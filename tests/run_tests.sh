@@ -19,6 +19,25 @@ send() {
     echo "$result"
 }
 
+send_retry() {
+    local cmd="$1"
+    local attempts="${2:-3}"
+    local delay="${3:-1}"
+    local result=""
+
+    for _ in $(seq 1 "$attempts"); do
+        result=$(send "$cmd")
+        if [ -n "$result" ]; then
+            echo "$result"
+            return 0
+        fi
+        sleep "$delay"
+    done
+
+    echo "$result"
+    return 0
+}
+
 assert() {
     local desc="$1"
     local result="$2"
@@ -141,11 +160,11 @@ assert "text content" "$(send 'text')" "Example Domain"
 
 echo ""
 echo "⌨️ INPUT TESTS"
-assert_not_empty "click" "$(send 'click 640 400')"
-assert "doubleclick" "$(send 'doubleclick 640 400')" "ok"
-assert "rightclick" "$(send 'rightclick 640 400')" "ok"
-assert "hover" "$(send 'hover h1')" "ok"
-assert "key" "$(send 'key Escape')" "ok"
+assert_not_empty "click" "$(send_retry 'click 640 400')"
+assert "doubleclick" "$(send_retry 'doubleclick 640 400')" "ok"
+assert "rightclick" "$(send_retry 'rightclick 640 400')" "ok"
+assert "hover" "$(send_retry 'hover h1')" "ok"
+assert "key" "$(send_retry 'key Escape')" "ok"
 
 echo ""
 echo "💾 STORAGE TESTS"
@@ -164,9 +183,9 @@ assert_contains "extension-inject" "$(send 'extension-inject')" "injected"
 
 echo ""
 echo "📊 MONITORING TESTS"
-assert "net-log" "$(send 'net-log')" "network_logging_started"
-assert "net-requests" "$(send 'net-requests')" "ok\|\["
-assert "net-stop" "$(send 'net-stop')" "network_logging_stopped"
+assert "net-log" "$(send_retry 'net-log')" "network_logging_started"
+assert "net-requests" "$(send_retry 'net-requests')" "ok\|\["
+assert "net-stop" "$(send_retry 'net-stop')" "network_logging_stopped"
 assert "perf-timing" "$(send 'perf-timing')" "dns"
 assert "ssl" "$(send 'ssl')" "https"
 

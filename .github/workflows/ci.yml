@@ -39,5 +39,8 @@ jobs:
       - name: Verify binary
         run: ./build/axonsurf --help
 
+      - name: Run native tests
+        run: ctest --test-dir build --output-on-failure
+
       - name: Run end-to-end tests
         run: bash tests/run_tests.sh
