@@ -315,6 +315,37 @@ void input_type_into(WebKitWebView *web_view, const char *selector,
     g_free(selector_js);
 }
 
+void input_combobox_select(WebKitWebView *web_view, const char *selector, const char *text) {
+    if (!web_view || !selector || !text) return;
+
+    char *selector_js = page_js_quote(selector);
+    char *focus_js = g_strdup_printf(
+        "(function(){"
+        "  var el = document.querySelector(%s);"
+        "  if(!el) return false;"
+        "  el.focus();"
+        "  el.click();"
+        "  return true;"
+        "})()", selector_js);
+    char *focus_res = page_eval_js(web_view, focus_js);
+    g_free(focus_res);
+    g_free(focus_js);
+
+    g_usleep(150000);
+    input_key_press(web_view, "Ctrl+A");
+    g_usleep(50000);
+    input_key_press(web_view, "Backspace");
+    g_usleep(50000);
+    input_type_text(web_view, text);
+    g_usleep(200000);
+    input_key_press(web_view, "ArrowDown");
+    g_usleep(100000);
+    input_key_press(web_view, "Enter");
+    g_usleep(100000);
+
+    g_free(selector_js);
+}
+
 void input_scroll(WebKitWebView *web_view, int delta_x, int delta_y) {
     GdkWindow *gdk_window = gtk_widget_get_window(GTK_WIDGET(web_view));
     if (!gdk_window) return;

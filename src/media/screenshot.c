@@ -2,7 +2,6 @@
 #include "page.h"
 #include <webkit2/webkit2.h>
 #include <sys/stat.h>
-#include <glib/gstdio.h>
 
 // Pending screenshot state
 typedef struct {
@@ -15,6 +14,42 @@ typedef struct {
 } PendingScreenshot;
 
 static PendingScreenshot g_pending = {0};
+
+typedef struct {
+    bool done;
+    bool success;
+    char *filepath;
+} SyncScreenshot;
+
+static void on_sync_snapshot_ready(GObject *source_object,
+                                    GAsyncResult *result,
+                                    gpointer user_data) {
+    SyncScreenshot *sync = (SyncScreenshot *)user_data;
+    GError *error = NULL;
+    cairo_surface_t *surface = webkit_web_view_get_snapshot_finish(
+        WEBKIT_WEB_VIEW(source_object), result, &error);
+
+    if (!sync) {
+        if (surface) cairo_surface_destroy(surface);
+        if (error) g_error_free(error);
+        return;
+    }
+
+    if (error || !surface) {
+        sync->success = false;
+        sync->done = true;
+        if (surface) cairo_surface_destroy(surface);
+        if (error) g_error_free(error);
+        return;
+    }
+
+    cairo_status_t status = cairo_surface_write_to_png(surface, sync->filepath);
+    sync->success = (status == CAIRO_STATUS_SUCCESS) &&
+                    g_file_test(sync->filepath, G_FILE_TEST_EXISTS) &&
+                    ({ struct stat st; stat(sync->filepath, &st) == 0 && st.st_size > 0; });
+    cairo_surface_destroy(surface);
+    sync->done = true;
+}
 
 static void on_snapshot_ready(GObject *source_object,
                                GAsyncResult *result,
@@ -133,23 +168,46 @@ char *screenshot_get_result_path(void) {
 }
 
 bool screenshot_sync(WebKitWebView *web_view, const char *filepath) {
+    return screenshot_sync_region(web_view, filepath,
+                                  WEBKIT_SNAPSHOT_REGION_VISIBLE);
+}
+
+bool screenshot_sync_region(WebKitWebView *web_view,
+                            const char *filepath,
+                            WebKitSnapshotRegion region) {
     if (!web_view || !filepath) return false;
 
-    const char *display = getenv("DISPLAY");
-    if (!display) display = ":0";
+    SyncScreenshot sync = {
+        .done = false,
+        .success = false,
+        .filepath = (char *)filepath,
+    };
 
-    char *argv[] = {"/usr/bin/import", "-window", "root", (char *)filepath, NULL};
-    char *envp[] = {g_strdup_printf("DISPLAY=%s", display), NULL};
-    int status = 0;
-    GError *error = NULL;
-    gboolean ok = g_spawn_sync(NULL, argv, envp, G_SPAWN_SEARCH_PATH,
-                               NULL, NULL, NULL, NULL, &status, &error);
-    g_free(envp[0]);
-
-    if (!ok || error) {
-        if (error) g_error_free(error);
-        return false;
+    const gint64 load_deadline = g_get_monotonic_time() + (30 * G_USEC_PER_SEC);
+    while (webkit_web_view_is_loading(web_view)) {
+        if (g_get_monotonic_time() > load_deadline) {
+            g_warning("AxonSurf: screenshot timed out waiting for page load");
+            return false;
+        }
+        g_main_context_iteration(NULL, TRUE);
     }
 
-    return g_file_test(filepath, G_FILE_TEST_EXISTS) && status == 0;
+    webkit_web_view_get_snapshot(web_view,
+                                 region,
+                                 WEBKIT_SNAPSHOT_OPTIONS_NONE,
+                                 NULL,
+                                 on_sync_snapshot_ready,
+                                 &sync);
+
+    const gint64 deadline = g_get_monotonic_time() + (30 * G_USEC_PER_SEC);
+    while (!sync.done) {
+        if (!g_main_context_iteration(NULL, TRUE)) {
+            if (g_get_monotonic_time() > deadline) {
+                g_warning("AxonSurf: screenshot timed out for %s", filepath);
+                break;
+            }
+        }
+    }
+
+    return sync.success;
 }

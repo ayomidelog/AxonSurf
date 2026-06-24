@@ -33,6 +33,9 @@ int page_wait_for_load(WebKitWebView *web_view, int timeout_ms);
 // Read text/value of a specific element
 char *page_read_element(WebKitWebView *web_view, const char *selector, bool read_value);
 
+// Set value/text for a specific element and dispatch framework-friendly events.
+int page_set_value(WebKitWebView *web_view, const char *selector, const char *value);
+
 // Count elements matching selector
 char *page_count_elements(WebKitWebView *web_view, const char *selector);
 

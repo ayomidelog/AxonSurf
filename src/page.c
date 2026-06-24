@@ -180,6 +180,46 @@ char *page_read_element(WebKitWebView *web_view, const char *selector, bool read
     return result;
 }
 
+int page_set_value(WebKitWebView *web_view, const char *selector, const char *value) {
+    if (!web_view || !selector || !value) return -1;
+
+    char *selector_js = page_js_quote(selector);
+    char *value_js = page_js_quote(value);
+    char *js = g_strdup_printf(
+        "(function(){"
+        "  var el = document.querySelector(%s);"
+        "  if(!el) return false;"
+        "  el.focus();"
+        "  if(el.isContentEditable) {"
+        "    el.textContent = %s;"
+        "  } else if(el.tagName === 'SELECT') {"
+        "    el.value = %s;"
+        "  } else {"
+        "    var proto = Object.getPrototypeOf(el);"
+        "    var desc = null;"
+        "    while(proto && !desc) {"
+        "      desc = Object.getOwnPropertyDescriptor(proto, 'value');"
+        "      proto = Object.getPrototypeOf(proto);"
+        "    }"
+        "    if(desc && desc.set) desc.set.call(el, %s);"
+        "    else el.value = %s;"
+        "  }"
+        "  el.dispatchEvent(new Event('input', {bubbles: true}));"
+        "  el.dispatchEvent(new Event('change', {bubbles: true}));"
+        "  el.dispatchEvent(new KeyboardEvent('keyup', {bubbles: true, key: 'Process'}));"
+        "  return true;"
+        "})()",
+        selector_js, value_js, value_js, value_js, value_js);
+
+    char *result = page_eval_js(web_view, js);
+    bool ok = (result && strstr(result, "true"));
+    g_free(result);
+    g_free(js);
+    g_free(selector_js);
+    g_free(value_js);
+    return ok ? 0 : -1;
+}
+
 char *page_count_elements(WebKitWebView *web_view, const char *selector) {
     if (!web_view || !selector) return NULL;
 

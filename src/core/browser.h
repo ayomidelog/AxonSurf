@@ -28,6 +28,7 @@ typedef struct {
     char *_profile_path;
     const char *_proxy_uri;
     const char *_user_agent;
+    char *pending_upload_path;
 } BrowserState;
 
 // Browser lifecycle

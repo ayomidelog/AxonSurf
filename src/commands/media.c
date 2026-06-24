@@ -71,8 +71,8 @@ char *cmd_media(BrowserState *state, const char *cmd, int argc, char **parts) {
         return checked ? cmd_json_result("checked", "true") : cmd_json_result("checked", "false");
     }
     if (strcmp(cmd, "upload") == 0 && argc >= 3) {
-        page_upload_file(state->web_view, parts[1], parts[2]);
-        return cmd_json_ok();
+        bool ok = page_upload_file(state, parts[1], parts[2]);
+        return ok ? cmd_json_ok() : cmd_json_error("upload_failed");
     }
     return NULL;
 }

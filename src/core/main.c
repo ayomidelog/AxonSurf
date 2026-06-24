@@ -2,6 +2,9 @@
 
 // Forward declaration
 static void on_load_changed(WebKitWebView *web_view, WebKitLoadEvent event, gpointer user_data);
+static gboolean on_run_file_chooser(WebKitWebView *web_view,
+                                     WebKitFileChooserRequest *request,
+                                     gpointer user_data);
 #include "browser.h"
 #include "command.h"
 #include "../storage/profile.h"
@@ -10,10 +13,22 @@ static void on_load_changed(WebKitWebView *web_view, WebKitLoadEvent event, gpoi
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <signal.h>
 
 static BrowserState *g_state = NULL;
 static GtkApplication *g_app = NULL;
+
+static void configure_web_extensions(WebKitWebContext *context) {
+    if (!context) return;
+
+    char cwd[PATH_MAX];
+    if (!getcwd(cwd, sizeof(cwd))) return;
+
+    char *webext_dir = g_build_filename(cwd, "build", "webext", NULL);
+    webkit_web_context_set_web_extensions_directory(context, webext_dir);
+    g_free(webext_dir);
+}
 
 static void handle_signal(int sig) {
     (void)sig;
@@ -38,7 +53,9 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     state->scrolled_window = gtk_scrolled_window_new(NULL, NULL);
     gtk_container_add(GTK_CONTAINER(state->window), state->scrolled_window);
 
-    state->web_view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+    state->web_context = webkit_web_context_new();
+    configure_web_extensions(state->web_context);
+    state->web_view = WEBKIT_WEB_VIEW(webkit_web_view_new_with_context(state->web_context));
     
     // Connect auth handler for proxy authentication
     profile_connect_auth_handler(state->web_view);
@@ -50,7 +67,8 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     webkit_web_view_set_settings(state->web_view, state->settings);
 
     // Set up cookie persistence
-    WebKitWebContext *web_context = webkit_web_view_get_context(state->web_view);
+    WebKitWebContext *web_context = state->web_context;
+    configure_web_extensions(web_context);
     profile_init(web_context, state->_profile_path);
 
     // Initialize extensions system
@@ -59,6 +77,8 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     // Connect load-changed signal for auto-injection
     g_signal_connect(state->web_view, "load-changed",
                      G_CALLBACK(on_load_changed), state);
+    g_signal_connect(state->web_view, "run-file-chooser",
+                     G_CALLBACK(on_run_file_chooser), state);
 
     // Set proxy if specified
     if (state->_proxy_uri) {
@@ -137,6 +157,23 @@ static void on_load_changed(WebKitWebView *web_view,
             extensions_inject_for_url(web_view, uri);
         }
     }
+}
+
+static gboolean on_run_file_chooser(WebKitWebView *web_view,
+                                     WebKitFileChooserRequest *request,
+                                     gpointer user_data) {
+    (void)web_view;
+    BrowserState *state = (BrowserState *)user_data;
+    if (!state || !request || !state->pending_upload_path) {
+        fprintf(stderr, "AxonSurf: run-file-chooser received without pending upload\n");
+        return FALSE;
+    }
+
+    const gchar *files[] = { state->pending_upload_path, NULL };
+    fprintf(stderr, "AxonSurf: selecting upload file %s\n", state->pending_upload_path);
+    webkit_file_chooser_request_select_files(request, files);
+    g_clear_pointer(&state->pending_upload_path, g_free);
+    return TRUE;
 }
 
 int main(int argc, char *argv[]) {
@@ -225,6 +262,7 @@ int main(int argc, char *argv[]) {
     headless_stop();
     g_object_unref(g_app);
     g_free(g_state->current_url);
+    g_free(g_state->pending_upload_path);
     g_free(profile_path);
     g_free(g_state);
 

@@ -23,6 +23,9 @@ void input_key_press(WebKitWebView *web_view, const char *key_name);
 // Type into a specific element found by selector
 void input_type_into(WebKitWebView *web_view, const char *selector, const char *text);
 
+// Drive a combobox-style text input and confirm the selection with keyboard.
+void input_combobox_select(WebKitWebView *web_view, const char *selector, const char *text);
+
 // Scroll
 void input_scroll(WebKitWebView *web_view, int delta_x, int delta_y);
 void input_scroll_to(WebKitWebView *web_view, const char *selector);

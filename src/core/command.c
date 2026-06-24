@@ -192,6 +192,18 @@ char *command_process(BrowserState *state, const char *line) {
         g_free(text);
         result = json_ok();
     }
+    else if (strcmp(cmd, "combobox") == 0 && argc >= 3) {
+        char *text = g_strjoinv(" ", parts + 2);
+        input_combobox_select(state->web_view, parts[1], text);
+        g_free(text);
+        result = json_ok();
+    }
+    else if (strcmp(cmd, "setvalue") == 0 && argc >= 3) {
+        char *text = g_strjoinv(" ", parts + 2);
+        int ret = page_set_value(state->web_view, parts[1], text);
+        g_free(text);
+        result = ret == 0 ? json_ok() : json_error("element_not_found");
+    }
     else if (strcmp(cmd, "humanize") == 0 && argc >= 2) {
         int level = atoi(parts[1]);
         humanize_set_level(level);
@@ -251,6 +263,19 @@ char *command_process(BrowserState *state, const char *line) {
         result = clean_eval_result(raw);
         g_free(script);
     }
+    else if (strcmp(cmd, "eval-file") == 0 && argc >= 2) {
+        gchar *script = NULL;
+        gsize length = 0;
+        GError *error = NULL;
+        if (g_file_get_contents(parts[1], &script, &length, &error)) {
+            char *raw = page_eval_js(state->web_view, script);
+            result = clean_eval_result(raw);
+            g_free(script);
+        } else {
+            result = json_error(error ? error->message : "eval_file_failed");
+            if (error) g_error_free(error);
+        }
+    }
     else if (strcmp(cmd, "read") == 0 && argc >= 2) {
         bool read_value = (argc >= 3 && strcmp(parts[2], "--value") == 0);
         result = page_read_element(state->web_view, parts[1], read_value);
@@ -290,14 +315,16 @@ char *command_process(BrowserState *state, const char *line) {
     else if (strcmp(cmd, "screenshot") == 0 && argc >= 2) {
         // Take screenshot synchronously
         if (strcmp(parts[1], "fullpage") == 0 && argc >= 3) {
-            bool ss1 = screenshot_sync(state->web_view, parts[2]);
+            bool ss1 = screenshot_sync_region(state->web_view, parts[2],
+                                              WEBKIT_SNAPSHOT_REGION_FULL_DOCUMENT);
             result = ss1 ? json_ok() : json_error("screenshot_failed");
         } else if (strcmp(parts[1], "viewport") == 0 && argc >= 3) {
-            bool ss2 = screenshot_sync(state->web_view, parts[2]);
+            bool ss2 = screenshot_sync_region(state->web_view, parts[2],
+                                              WEBKIT_SNAPSHOT_REGION_VISIBLE);
             result = ss2 ? json_ok() : json_error("screenshot_failed");
         } else if (strcmp(parts[1], "element") == 0 && argc >= 4) {
             int ret = screenshot_schedule_element(state->web_view, parts[2], parts[3]);
-            result = result ? result : json_result("status", "scheduled");
+            result = ret ? json_result("status", "scheduled") : json_error("screenshot_failed");
         } else {
             bool ss3 = screenshot_sync(state->web_view, parts[1]);
             result = ss3 ? json_ok() : json_error("screenshot_failed");
@@ -573,8 +600,8 @@ char *command_process(BrowserState *state, const char *line) {
     }
     // === File upload ===
     else if (strcmp(cmd, "upload") == 0 && argc >= 3) {
-        page_upload_file(state->web_view, parts[1], parts[2]);
-        result = json_ok();
+        bool ok = page_upload_file(state, parts[1], parts[2]);
+        result = ok ? json_ok() : json_error("upload_failed");
     }
     // === Bug 7: Dismiss overlays ===
     else if (strcmp(cmd, "dismiss") == 0) {
@@ -723,7 +750,9 @@ char *command_process(BrowserState *state, const char *line) {
     else if (strcmp(cmd, "help") == 0) {
         result = json_result("help",
             "goto click doubleclick rightclick type key typeinto hover "
+            "combobox setvalue "
             "scroll scrollto focus find eval text content a11y elements "
+            "eval-file "
             "screenshot url title tabs newtab tab closetab resize viewport "
             "waitfor waitload wait read count inspect "
             "role-click role-type role-find frames dialog dialogs "

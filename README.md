@@ -119,8 +119,9 @@ printf 'url\n' | socat - UNIX-CONNECT:/tmp/my.sock
 
 ### Media and Files
 
-- `screenshot <file>`
-- `screenshot viewport <file>`
+- `screenshot <file>` - capture the current viewport
+- `screenshot viewport <file>` - explicit viewport capture
+- `screenshot fullpage <file>` - capture the full document
 - `screenshot element <selector> <file>`
 - `pdf <file>`
 - `upload <selector> <file>`

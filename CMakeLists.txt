@@ -44,8 +44,13 @@ set(SOURCES
     src/headless/headless.c
 )
 
+set(WEBEXT_SOURCES
+    src/webext/axonsurf_webext.c
+)
+
 # Build
 add_executable(axonsurf ${SOURCES})
+add_library(axonsurf_webext SHARED ${WEBEXT_SOURCES})
 
 set(TEST_SOURCES
     tests/test_runner.c
@@ -79,6 +84,23 @@ target_link_libraries(axonsurf PRIVATE
     m
 )
 
+target_include_directories(axonsurf_webext PRIVATE
+    ${GTK3_INCLUDE_DIRS}
+    ${WEBKIT_INCLUDE_DIRS}
+    ${JSONGLIB_INCLUDE_DIRS}
+    ${CLIB_INCLUDE_DIRS}
+    src
+)
+
+target_link_libraries(axonsurf_webext PRIVATE
+    ${GTK3_LIBRARIES}
+    ${WEBKIT_LIBRARIES}
+    ${JSONGLIB_LIBRARIES}
+    ${CLIB_LIBRARIES}
+    ${X11_LIBRARIES}
+    m
+)
+
 target_include_directories(axonsurf_tests PRIVATE
     ${GTK3_INCLUDE_DIRS}
     ${WEBKIT_INCLUDE_DIRS}
@@ -100,6 +122,17 @@ target_compile_options(axonsurf PRIVATE
     ${GTK3_CFLAGS_OTHER}
     ${WEBKIT_CFLAGS_OTHER}
     ${JSONGLIB_CFLAGS_OTHER}
+)
+
+target_compile_options(axonsurf_webext PRIVATE
+    ${GTK3_CFLAGS_OTHER}
+    ${WEBKIT_CFLAGS_OTHER}
+    ${JSONGLIB_CFLAGS_OTHER}
+)
+
+set_target_properties(axonsurf_webext PROPERTIES
+    PREFIX ""
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/webext"
 )
 
 target_compile_options(axonsurf_tests PRIVATE

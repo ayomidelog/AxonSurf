@@ -3,6 +3,7 @@
 #include "input/input.h"
 #include <string.h>
 #include <stdlib.h>
+#include <glib/gstdio.h>
 
 // === Checkbox/Radio ===
 
@@ -56,28 +57,73 @@ bool page_is_checked(WebKitWebView *web_view, const char *selector) {
 
 // === File Upload ===
 
-void page_upload_file(WebKitWebView *web_view, const char *selector, const char *filepath) {
-    if (!web_view || !selector || !filepath) return;
+bool page_upload_file(BrowserState *state, const char *selector, const char *filepath) {
+    if (!state || !state->web_view || !selector || !filepath) return false;
+    if (!g_file_test(filepath, G_FILE_TEST_EXISTS)) return false;
 
-    // Find the file input and set its files via DataTransfer API
+    gchar *file_bytes = NULL;
+    gsize file_size = 0;
+    GError *error = NULL;
+    if (!g_file_get_contents(filepath, &file_bytes, &file_size, &error)) {
+        if (error) {
+            fprintf(stderr, "AxonSurf: upload failed (%s)\n", error->message);
+            g_error_free(error);
+        }
+        return false;
+    }
+
+    gchar *base64 = g_base64_encode((const guchar *)file_bytes, file_size);
+    g_free(file_bytes);
+
     char *selector_js = page_js_quote(selector);
-    char *filepath_js = page_js_quote(filepath);
+    char *name_js = page_js_quote(g_path_get_basename(filepath));
+    char *base64_js = page_js_quote(base64);
+    g_free(base64);
+
     char *js = g_strdup_printf(
         "(function(){"
         "  var el = document.querySelector(%s);"
-        "  if(!el || el.type !== 'file') return 'not_file_input';"
-        "  // Create a File object and set it on the input"
-        "  // Note: direct file access isn't possible from JS in modern browsers"
-        "  // But we can trigger the change event after setting the value"
-        "  el.value = %s;"
+        "  if(!el || el.type !== 'file') return false;"
+        "  function b64ToBytes(b64) {"
+        "    var bin = atob(b64);"
+        "    var bytes = new Uint8Array(bin.length);"
+        "    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);"
+        "    return bytes;"
+        "  }"
+        "  var file = new File([b64ToBytes(%s)], %s);"
+        "  var dt = new DataTransfer();"
+        "  dt.items.add(file);"
+        "  var proto = Object.getPrototypeOf(el);"
+        "  var desc = null;"
+        "  while(proto && !desc) {"
+        "    desc = Object.getOwnPropertyDescriptor(proto, 'files');"
+        "    proto = Object.getPrototypeOf(proto);"
+        "  }"
+        "  if(desc && desc.set) desc.set.call(el, dt.files);"
+        "  else el.files = dt.files;"
+        "  el.dispatchEvent(new Event('input', {bubbles: true}));"
         "  el.dispatchEvent(new Event('change', {bubbles: true}));"
-        "  return 'file_set';"
-        "})()", selector_js, filepath_js);
-    char *res = page_eval_js(web_view, js);
-    g_free(res);
+        "  return el.files && el.files.length > 0;"
+        "})()",
+        selector_js, base64_js, name_js);
+
+    char *result = page_eval_js(state->web_view, js);
+    bool ok = false;
+    if (result) {
+        if (strstr(result, "true")) {
+            ok = true;
+        } else if (strstr(result, "\"true\"")) {
+            ok = true;
+        } else if (strstr(result, "1")) {
+            ok = true;
+        }
+    }
+    g_free(result);
     g_free(js);
     g_free(selector_js);
-    g_free(filepath_js);
+    g_free(name_js);
+    g_free(base64_js);
+    return ok;
 }
 
 // === Drag and Drop Simulation ===

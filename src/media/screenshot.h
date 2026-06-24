@@ -7,8 +7,13 @@
 // Schedule a full-page screenshot (deferred, non-blocking)
 bool screenshot_schedule(WebKitWebView *web_view, const char *filepath);
 
-// Take a synchronous screenshot (blocks until done)
+// Take a synchronous viewport screenshot (blocks until done)
 bool screenshot_sync(WebKitWebView *web_view, const char *filepath);
+
+// Take a synchronous screenshot for a specific region
+bool screenshot_sync_region(WebKitWebView *web_view,
+                            const char *filepath,
+                            WebKitSnapshotRegion region);
 
 // Schedule a screenshot with explicit region
 bool screenshot_schedule_region(WebKitWebView *web_view,
