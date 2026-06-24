@@ -76,7 +76,8 @@ bool page_upload_file(BrowserState *state, const char *selector, const char *fil
     g_free(file_bytes);
 
     char *selector_js = page_js_quote(selector);
-    char *name_js = page_js_quote(g_path_get_basename(filepath));
+    char *basename = g_path_get_basename(filepath);
+    char *name_js = page_js_quote(basename);
     char *base64_js = page_js_quote(base64);
     g_free(base64);
 
@@ -123,7 +124,13 @@ bool page_upload_file(BrowserState *state, const char *selector, const char *fil
     g_free(selector_js);
     g_free(name_js);
     g_free(base64_js);
-    return ok;
+
+    if (!ok) {
+        return false;
+    }
+
+    g_free(basename);
+    return true;
 }
 
 // === Drag and Drop Simulation ===

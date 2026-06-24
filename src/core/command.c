@@ -798,10 +798,9 @@ static gboolean on_client_readable(GIOChannel *channel,
         if (response) {
             gsize written = 0;
             g_io_channel_write_chars(channel, response, -1,
-                                      &written, &error);
-            g_io_channel_write_chars(channel, "\n", -1,
-                                      &written, &error);
-            g_io_channel_flush(channel, NULL);
+                                     &written, &error);
+            g_io_channel_write_chars(channel, "\n", -1, &written, &error);
+            g_io_channel_flush(channel, &error);
             g_free(response);
         }
         g_free(line);
