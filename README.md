@@ -61,7 +61,7 @@ The main binary is produced at:
 In headless mode:
 
 - AxonSurf starts Xvfb automatically if no usable display is available.
-- If `--socket` is not provided, it defaults to `/tmp/axonsurf.sock`.
+- If `--socket` is not provided, AxonSurf uses `/tmp/axonsurf.sock` automatically.
 
 ### Send commands
 

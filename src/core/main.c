@@ -128,7 +128,7 @@ static void print_usage(const char *prog) {
     printf("  --headless              Run without visible window (needs Xvfb)\n");
     printf("  --width  <px>           Window width (default: 1280)\n");
     printf("  --height <px>           Window height (default: 800)\n");
-    printf("  --socket <path>         Command socket path (default: stdin, or /tmp/axonsurf.sock in headless mode)\n");
+    printf("  --socket <path>         Command socket path (default: stdin; headless mode auto-uses /tmp/axonsurf.sock)\n");
     printf("  --profile <name>        Profile name for cookies/session (default: default)\n");
     printf("  --humanize <0-100>      Set humanization level at launch\n");
     printf("  --proxy <uri>           Proxy (e.g. socks5://127.0.0.1:1080)\n");

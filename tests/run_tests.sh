@@ -117,6 +117,27 @@ echo "🚀 BINARY TEST"
 echo "  ✅ $("$BINARY" --help 2>&1 | head -1)"
 
 echo ""
+echo "🧷 HEADLESS SOCKET TEST"
+DEFAULT_SOCK="/tmp/axonsurf.sock"
+DEFAULT_LOG="/tmp/axonsurf-default-sock.log"
+rm -f "$DEFAULT_SOCK" "$DEFAULT_LOG"
+setsid "$BINARY" --headless about:blank </dev/null >"$DEFAULT_LOG" 2>&1 &
+DEFAULT_PID=$!
+if ! wait_for_socket "$DEFAULT_SOCK" "$DEFAULT_PID" 60; then
+    echo "  ❌ default headless socket did not appear"
+    if [ -f "$DEFAULT_LOG" ]; then
+        tail -40 "$DEFAULT_LOG"
+    fi
+    kill "$DEFAULT_PID" 2>/dev/null || true
+    FAIL=$((FAIL+1))
+    TOTAL=$((TOTAL+1))
+else
+    assert_not_empty "default headless url" "$(printf 'url\n' | socat -T 15 - UNIX-CONNECT:$DEFAULT_SOCK)"
+    kill "$DEFAULT_PID" 2>/dev/null || true
+fi
+rm -f "$DEFAULT_SOCK" "$DEFAULT_LOG"
+
+echo ""
 echo "🌐 SERVER TEST"
 setsid "$BINARY" --headless --socket "$SOCK" </dev/null >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
